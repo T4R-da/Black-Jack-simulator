@@ -1,0 +1,132 @@
+#include "functions.hpp"
+
+// Optional: miniaudio implementation
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
+void refreshUI(const std::vector<Card>& pHand, const std::vector<Card>& dHand, std::string phase, bool revealDealer) {
+    clearScreen();
+    printHeader();
+    std::cout << YELLOW << "Current Bet: $" << currentBet << " | Balance: $" << playerBalance - currentBet << RESET << "\n";
+    std::cout << GREEN << BOLD << "PHASE: " << phase << RESET << "\n\n";
+
+    // Dealer Display
+    std::cout << BOLD << "DEALER HAND: " << RESET;
+    if (!revealDealer) {
+        if (!dHand.empty()) dHand[0].print();
+        std::cout << "[??] (Hidden)";
+    } else {
+        for (const auto& c : dHand) c.print();
+        std::cout << " (Total: " << calculateHandValue(dHand) << ")";
+    }
+
+    // Player Display
+    std::cout << "\n\n" << BOLD << "YOUR HAND:   " << RESET;
+    for (const auto& c : pHand) c.print();
+    int pVal = calculateHandValue(pHand);
+    std::cout << " (Total: " << pVal << ")";
+
+    if (pVal > 21) std::cout << RED << BOLD << " -> BUSTED!" << RESET;
+    std::cout << "\n----------------------------------------\n";
+}
+
+void playGame() {
+    // 1. Betting
+    if (playerBalance <= 0) playerBalance = 200; // Charity
+    while (true) {
+        clearScreen();
+        printHeader();
+        std::cout << GREEN << "BALANCE: $" << playerBalance << RESET << "\n";
+        std::cout << "Enter your bet: $";
+        std::cin >> currentBet;
+        if (currentBet > 0 && currentBet <= playerBalance) break;
+        std::cout << RED << "Invalid bet!" << RESET; Sleep(1000);
+    }
+
+    // 2. Initial Deal
+    std::vector<Card> pHand = { drawCard(), drawCard() };
+    std::vector<Card> dHand = { drawCard(), drawCard() };
+
+    // 3. Player Turn
+    bool playerBusted = false;
+    while (true) {
+        refreshUI(pHand, dHand, "YOUR TURN (H: Hit, S: Stand)", false);
+        if (calculateHandValue(pHand) > 21) { playerBusted = true; break; }
+        if (calculateHandValue(pHand) == 21) break;
+
+        char choice = _getch();
+        if (choice == 'h' || choice == 'H') pHand.push_back(drawCard());
+        else if (choice == 's' || choice == 'S') break;
+    }
+
+    // 4. Dealer Turn
+    if (!playerBusted) {
+        while (calculateHandValue(dHand) < 17) {
+            refreshUI(pHand, dHand, "DEALER DRAWS...", true);
+            Sleep(800);
+            dHand.push_back(drawCard());
+        }
+    }
+
+    // 5. Resolution
+    refreshUI(pHand, dHand, "FINAL RESULTS", true);
+    int pFinal = calculateHandValue(pHand);
+    int dFinal = calculateHandValue(dHand);
+
+    std::cout << "\n";
+    if (pFinal > 21) {
+        std::cout << RED << "BUST! You lose $" << currentBet << RESET << "\n";
+        playerBalance -= currentBet;
+    } else if (dFinal > 21 || pFinal > dFinal) {
+        std::cout << GREEN << BOLD << "YOU WIN! Gained $" << currentBet << RESET << "\n";
+        playerBalance += currentBet;
+    } else if (dFinal > pFinal) {
+        std::cout << RED << "HOUSE WINS! Lost $" << currentBet << RESET << "\n";
+        playerBalance -= currentBet;
+    } else {
+        std::cout << YELLOW << "PUSH! Bet returned." << RESET << "\n";
+    }
+    waitForEnter();
+}
+
+int main() {
+    cardseed();
+    
+    // Audio Initialization
+    ma_engine engine;
+    if (ma_engine_init(NULL, &engine) == MA_SUCCESS) {
+        ma_engine_play_sound(&engine, "sound.wav", NULL); 
+    }
+
+    int choice = 0;
+    std::string options[] = {"Start Game", "Rules", "Exit"};
+
+    while (true) {
+        clearScreen();
+        printHeader();
+        std::cout << YELLOW << "ACCOUNT BALANCE: $" << playerBalance << RESET << "\n\n";
+
+        for (int i = 0; i < 3; i++) {
+            if (i == choice) std::cout << GREEN << BOLD << "  > " << options[i] << " <" << RESET << std::endl;
+            else std::cout << "    " << options[i] << std::endl;
+        }
+
+        int key = _getch();
+        if (key == 224) { // Arrow Keys
+            key = _getch();
+            if (key == 72) choice = (choice - 1 + 3) % 3; // Up
+            if (key == 80) choice = (choice + 1) % 3;     // Down
+        } else if (key == 13) { // Enter
+            if (choice == 0) playGame();
+            else if (choice == 1) {
+                clearScreen();
+                std::cout << "RULES:\n1. Get closer to 21 than dealer.\n2. Dealer hits until 17.\n3. Ace is 1 or 11.\n";
+                waitForEnter();
+            }
+            else break;
+        }
+    }
+
+    ma_engine_uninit(&engine);
+    return 0;
+}

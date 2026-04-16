@@ -1,0 +1,1 @@
+g++ main.cpp -o blackjack.exe -lwinmm -lole32
