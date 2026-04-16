@@ -1,4 +1,6 @@
 #include "functions.hpp"
+#include <thread> // Required for sleep
+#include <chrono> // Required for seconds
 
 // Optional: miniaudio implementation
 #define MINIAUDIO_IMPLEMENTATION
@@ -30,7 +32,7 @@ void refreshUI(const std::vector<Card>& pHand, const std::vector<Card>& dHand, s
     std::cout << "\n----------------------------------------\n";
 }
 
-void playGame() {
+void playGame(ma_engine* pMainEngine) { // Added engine parameter
     // 1. Betting
     if (playerBalance <= 0) playerBalance = 200; // Charity
     while (true) {
@@ -77,12 +79,45 @@ void playGame() {
     if (pFinal > 21) {
         std::cout << RED << "BUST! You lose $" << currentBet << RESET << "\n";
         playerBalance -= currentBet;
+
+        // --- LOSE SOUND (FART) ---
+        ma_engine_stop(pMainEngine);
+        ma_engine engine2;
+        if (ma_engine_init(NULL, &engine2) == MA_SUCCESS) {
+            ma_engine_play_sound(&engine2, "fart.wav", NULL);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            ma_engine_uninit(&engine2);
+        }
+        ma_engine_start(pMainEngine);
+
     } else if (dFinal > 21 || pFinal > dFinal) {
         std::cout << GREEN << BOLD << "YOU WIN! Gained $" << currentBet << RESET << "\n";
         playerBalance += currentBet;
+
+        // --- WIN SOUND (JACKPOT) ---
+        ma_engine_stop(pMainEngine);
+        ma_engine engine3;
+        if (ma_engine_init(NULL, &engine3) == MA_SUCCESS) {
+            ma_engine_play_sound(&engine3, "jackpot.wav", NULL);
+            std::this_thread::sleep_for(std::chrono::seconds(3));
+            ma_engine_uninit(&engine3);
+        }
+        ma_engine_start(pMainEngine);
+
     } else if (dFinal > pFinal) {
         std::cout << RED << "HOUSE WINS! Lost $" << currentBet << RESET << "\n";
         playerBalance -= currentBet;
+
+        // --- LOSE SOUND (FART) ---
+        ma_engine_stop(pMainEngine);
+        ma_engine engine2;
+        if (ma_engine_init(NULL, &engine2) == MA_SUCCESS) {
+            ma_engine_play_sound(&engine2, "fart.wav", NULL);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            ma_engine_uninit(&engine2);
+        }
+        ma_engine_start(pMainEngine);
+
     } else {
         std::cout << YELLOW << "PUSH! Bet returned." << RESET << "\n";
     }
@@ -94,8 +129,10 @@ int main() {
     
     // Audio Initialization
     ma_engine engine;
+    bool audioEnabled = false;
     if (ma_engine_init(NULL, &engine) == MA_SUCCESS) {
         ma_engine_play_sound(&engine, "sound.wav", NULL); 
+        audioEnabled = true;
     }
 
     int choice = 0;
@@ -117,7 +154,7 @@ int main() {
             if (key == 72) choice = (choice - 1 + 3) % 3; // Up
             if (key == 80) choice = (choice + 1) % 3;     // Down
         } else if (key == 13) { // Enter
-            if (choice == 0) playGame();
+            if (choice == 0) playGame(&engine); // Pass the engine here
             else if (choice == 1) {
                 clearScreen();
                 std::cout << "RULES:\n1. Get closer to 21 than dealer.\n2. Dealer hits until 17.\n3. Ace is 1 or 11.\n";
@@ -127,6 +164,6 @@ int main() {
         }
     }
 
-    ma_engine_uninit(&engine);
+    if (audioEnabled) ma_engine_uninit(&engine);
     return 0;
 }
