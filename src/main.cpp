@@ -32,9 +32,9 @@ void refreshUI(const std::vector<Card>& pHand, const std::vector<Card>& dHand, s
     std::cout << "\n----------------------------------------\n";
 }
 
-void playGame(ma_engine* pMainEngine) { // Added engine parameter
+void playGame(ma_engine* pMainEngine) { 
     // 1. Betting
-    if (playerBalance <= 0) playerBalance = 200; // Charity
+    if (playerBalance <= 0) playerBalance = 200; 
     while (true) {
         clearScreen();
         printHeader();
@@ -46,6 +46,7 @@ void playGame(ma_engine* pMainEngine) { // Added engine parameter
     }
 
     // 2. Initial Deal
+    ma_engine_play_sound(pMainEngine, "draw.wav", NULL); // Play draw sound
     std::vector<Card> pHand = { drawCard(), drawCard() };
     std::vector<Card> dHand = { drawCard(), drawCard() };
 
@@ -57,7 +58,10 @@ void playGame(ma_engine* pMainEngine) { // Added engine parameter
         if (calculateHandValue(pHand) == 21) break;
 
         char choice = _getch();
-        if (choice == 'h' || choice == 'H') pHand.push_back(drawCard());
+        if (choice == 'h' || choice == 'H') {
+            ma_engine_play_sound(pMainEngine, "draw.wav", NULL); // Play draw sound on hit
+            pHand.push_back(drawCard());
+        }
         else if (choice == 's' || choice == 'S') break;
     }
 
@@ -65,6 +69,7 @@ void playGame(ma_engine* pMainEngine) { // Added engine parameter
     if (!playerBusted) {
         while (calculateHandValue(dHand) < 17) {
             refreshUI(pHand, dHand, "DEALER DRAWS...", true);
+            ma_engine_play_sound(pMainEngine, "draw.wav", NULL); // Play draw sound for dealer
             Sleep(800);
             dHand.push_back(drawCard());
         }
@@ -154,7 +159,7 @@ int main() {
             if (key == 72) choice = (choice - 1 + 3) % 3; // Up
             if (key == 80) choice = (choice + 1) % 3;     // Down
         } else if (key == 13) { // Enter
-            if (choice == 0) playGame(&engine); // Pass the engine here
+            if (choice == 0) playGame(&engine); 
             else if (choice == 1) {
                 clearScreen();
                 std::cout << "RULES:\n1. Get closer to 21 than dealer.\n2. Dealer hits until 17.\n3. Ace is 1 or 11.\n";
@@ -167,3 +172,4 @@ int main() {
     if (audioEnabled) ma_engine_uninit(&engine);
     return 0;
 }
+
