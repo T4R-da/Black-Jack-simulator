@@ -34,7 +34,7 @@ void refreshUI(const std::vector<Card>& pHand, const std::vector<Card>& dHand, s
 
 void playGame(ma_engine* pMainEngine) { 
     // 1. Betting
-    if (playerBalance <= 0) playerBalance = 200; 
+    if (playerBalance <= 0) playerBalance = 200; // Charity
     while (true) {
         clearScreen();
         printHeader();
@@ -46,7 +46,6 @@ void playGame(ma_engine* pMainEngine) {
     }
 
     // 2. Initial Deal
-    ma_engine_play_sound(pMainEngine, "draw.wav", NULL); // Play draw sound
     std::vector<Card> pHand = { drawCard(), drawCard() };
     std::vector<Card> dHand = { drawCard(), drawCard() };
 
@@ -58,10 +57,7 @@ void playGame(ma_engine* pMainEngine) {
         if (calculateHandValue(pHand) == 21) break;
 
         char choice = _getch();
-        if (choice == 'h' || choice == 'H') {
-            ma_engine_play_sound(pMainEngine, "draw.wav", NULL); // Play draw sound on hit
-            pHand.push_back(drawCard());
-        }
+        if (choice == 'h' || choice == 'H') pHand.push_back(drawCard());
         else if (choice == 's' || choice == 'S') break;
     }
 
@@ -69,7 +65,6 @@ void playGame(ma_engine* pMainEngine) {
     if (!playerBusted) {
         while (calculateHandValue(dHand) < 17) {
             refreshUI(pHand, dHand, "DEALER DRAWS...", true);
-            ma_engine_play_sound(pMainEngine, "draw.wav", NULL); // Play draw sound for dealer
             Sleep(800);
             dHand.push_back(drawCard());
         }
@@ -81,17 +76,18 @@ void playGame(ma_engine* pMainEngine) {
     int dFinal = calculateHandValue(dHand);
 
     std::cout << "\n";
+    
     if (pFinal > 21) {
         std::cout << RED << "BUST! You lose $" << currentBet << RESET << "\n";
         playerBalance -= currentBet;
 
         // --- LOSE SOUND (FART) ---
         ma_engine_stop(pMainEngine);
-        ma_engine engine2;
-        if (ma_engine_init(NULL, &engine2) == MA_SUCCESS) {
-            ma_engine_play_sound(&engine2, "fart.wav", NULL);
+        ma_engine engineEffect;
+        if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
+            ma_engine_play_sound(&engineEffect, "fart.wav", NULL);
             std::this_thread::sleep_for(std::chrono::seconds(2));
-            ma_engine_uninit(&engine2);
+            ma_engine_uninit(&engineEffect);
         }
         ma_engine_start(pMainEngine);
 
@@ -101,11 +97,11 @@ void playGame(ma_engine* pMainEngine) {
 
         // --- WIN SOUND (JACKPOT) ---
         ma_engine_stop(pMainEngine);
-        ma_engine engine3;
-        if (ma_engine_init(NULL, &engine3) == MA_SUCCESS) {
-            ma_engine_play_sound(&engine3, "jackpot.wav", NULL);
+        ma_engine engineEffect;
+        if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
+            ma_engine_play_sound(&engineEffect, "jackpot.wav", NULL);
             std::this_thread::sleep_for(std::chrono::seconds(3));
-            ma_engine_uninit(&engine3);
+            ma_engine_uninit(&engineEffect);
         }
         ma_engine_start(pMainEngine);
 
@@ -115,17 +111,30 @@ void playGame(ma_engine* pMainEngine) {
 
         // --- LOSE SOUND (FART) ---
         ma_engine_stop(pMainEngine);
-        ma_engine engine2;
-        if (ma_engine_init(NULL, &engine2) == MA_SUCCESS) {
-            ma_engine_play_sound(&engine2, "fart.wav", NULL);
+        ma_engine engineEffect;
+        if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
+            ma_engine_play_sound(&engineEffect, "fart.wav", NULL);
             std::this_thread::sleep_for(std::chrono::seconds(2));
-            ma_engine_uninit(&engine2);
+            ma_engine_uninit(&engineEffect);
         }
         ma_engine_start(pMainEngine);
 
     } else {
+        // --- THIS IS THE SHOWDOWN DRAW (PUSH) ---
         std::cout << YELLOW << "PUSH! Bet returned." << RESET << "\n";
+
+        // --- DRAW SOUND (DRAW.WAV) ---
+        ma_engine_stop(pMainEngine);
+        ma_engine engineEffect;
+        if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
+            ma_engine_play_sound(&engineEffect, "draw.wav", NULL);
+            // Wait for 2 seconds to let the draw sound play
+            std::this_thread::sleep_for(std::chrono::seconds(2)); 
+            ma_engine_uninit(&engineEffect);
+        }
+        ma_engine_start(pMainEngine);
     }
+    
     waitForEnter();
 }
 
@@ -172,4 +181,3 @@ int main() {
     if (audioEnabled) ma_engine_uninit(&engine);
     return 0;
 }
-
