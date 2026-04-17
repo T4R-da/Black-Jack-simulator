@@ -5,6 +5,10 @@
 #include <ctime>
 #include <conio.h>
 #include <windows.h>
+#include <random>
+#include <thread>
+#include <chrono>
+#include <algorithm>
 
 // ANSI Colors
 #define RESET   "\033[0m"
@@ -23,9 +27,11 @@ enum class Rank {
     JACK, QUEEN, KING, ACE
 };
 
+enum class Suit { HEARTS = 0, DIAMONDS = 1, CLUBS = 2, SPADES = 3 };
+
 struct Card {
     Rank rank;
-    std::string suit;
+    Suit suit;
 
     void print() const {
         std::string r;
@@ -36,31 +42,85 @@ struct Card {
         else if (v == 13) r = "K";
         else if (v == 14) r = "A";
 
+        std::string s;
+        switch(suit) {
+            case Suit::HEARTS:   s = "H"; break;
+            case Suit::DIAMONDS: s = "D"; break;
+            case Suit::CLUBS:    s = "C"; break;
+            case Suit::SPADES:   s = "S"; break;
+        }
+
         // Hearts and Diamonds are Red
-        if (suit == "H" || suit == "D") std::cout << RED;
-        else std::cout << RESET;
+        if (suit == Suit::HEARTS || suit == Suit::DIAMONDS) std::cout << RED;
+        else std::cout << CYAN;
         
-        std::cout << "[" << r << suit << "] " << RESET;
+        std::cout << "[" << r << s << "] " << RESET;
+    }
+};
+
+// --- TIMING UTILS ---
+inline void sleepMs(int ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+inline void sleepRandom() {
+    sleepMs(1000 + (rand() % 1000)); // 1-2 second delay for dealer "thinking"
+}
+
+// --- DECK CLASS (52 cards, no duplicates) ---
+class Deck {
+private:
+    std::vector<Card> cards;
+public:
+    Deck() {
+        // Create full 52-card deck
+        for (int s = 0; s < 4; ++s) {
+            for (int r = 2; r <= 14; ++r) {
+                cards.push_back({static_cast<Rank>(r), static_cast<Suit>(s)});
+            }
+        }
+    }
+    
+    void shuffle() {
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(cards.begin(), cards.end(), g);
+    }
+    
+    Card drawCard() {
+        if (cards.empty()) {
+            // Safety fallback - shouldn't happen in Blackjack (max 52 cards used)
+            return {Rank::ACE, Suit::SPADES};
+        }
+        Card c = cards.back();
+        cards.pop_back();
+        return c;
+    }
+    
+    bool isEmpty() const {
+        return cards.empty();
+    }
+    
+    int remaining() const {
+        return static_cast<int>(cards.size());
+    }
+    
+    void reset() {
+        cards.clear();
+        for (int s = 0; s < 4; ++s) {
+            for (int r = 2; r <= 14; ++r) {
+                cards.push_back({static_cast<Rank>(r), static_cast<Suit>(s)});
+            }
+        }
     }
 };
 
 // --- LOGIC FUNCTIONS ---
-
 inline int getCardValue(Rank r) {
     int v = (int)r;
     if (v >= 11 && v <= 13) return 10; // J, Q, K = 10
-    if (v == 14) return 11;            // Ace = 11
+    if (v == 14) return 11;            // Ace = 11 (flexible)
     return v;
-}
-
-inline void cardseed() {
-    std::srand(static_cast<unsigned>(std::time(0)));
-}
-
-inline Card drawCard() {
-    std::string suits[] = {"H", "D", "C", "S"};
-    Rank r = static_cast<Rank>((std::rand() % 13) + 2);
-    return { r, suits[std::rand() % 4] };
 }
 
 inline int calculateHandValue(const std::vector<Card>& hand) {
@@ -70,7 +130,7 @@ inline int calculateHandValue(const std::vector<Card>& hand) {
         total += getCardValue(c.rank);
         if (c.rank == Rank::ACE) aces++;
     }
-    // Ace logic: if total > 21, subtract 10 for every Ace held
+    // Ace logic: if total > 21, subtract 10 for every Ace (11 becomes 1)
     while (total > 21 && aces > 0) {
         total -= 10;
         aces--;
@@ -79,7 +139,6 @@ inline int calculateHandValue(const std::vector<Card>& hand) {
 }
 
 // --- UI HELPERS ---
-
 inline void clearScreen() { system("cls"); }
 
 inline void printHeader() {
