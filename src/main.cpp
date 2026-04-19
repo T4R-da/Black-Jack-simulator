@@ -119,13 +119,13 @@ void playGame(ma_engine* pMainEngine) {
         int blackjackPay = static_cast<int>(currentBet * 1.5); // Blackjack pays 3:2
         std::cout << GREEN << "BLACKJACK! You win $" << blackjackPay << RESET << std::endl;
         playerBalance += blackjackPay;
-        sleepMs(2000);
+        sleepMs(50);
         
         // Win sound
         ma_engine_stop(pMainEngine);
         ma_engine engineEffect;
         if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
-            ma_engine_play_sound(&engineEffect, "jackpot.wav", NULL);
+            ma_engine_play_sound(&engineEffect, "win.wav", NULL);
             std::this_thread::sleep_for(std::chrono::seconds(3));
             ma_engine_uninit(&engineEffect);
         }
@@ -201,8 +201,8 @@ void playGame(ma_engine* pMainEngine) {
         ma_engine_stop(pMainEngine);
         ma_engine engineEffect;
         if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
-            ma_engine_play_sound(&engineEffect, "fart.wav", NULL);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
+            ma_engine_play_sound(&engineEffect, "loss.wav", NULL);
+            std::this_thread::sleep_for(std::chrono::seconds(4));
             ma_engine_uninit(&engineEffect);
         }
         ma_engine_start(pMainEngine);
@@ -215,8 +215,8 @@ void playGame(ma_engine* pMainEngine) {
         ma_engine_stop(pMainEngine);
         ma_engine engineEffect;
         if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
-            ma_engine_play_sound(&engineEffect, "jackpot.wav", NULL);
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            ma_engine_play_sound(&engineEffect, "win.wav", NULL);
+            std::this_thread::sleep_for(std::chrono::seconds(4));
             ma_engine_uninit(&engineEffect);
         }
         ma_engine_start(pMainEngine);
@@ -229,8 +229,8 @@ void playGame(ma_engine* pMainEngine) {
         ma_engine_stop(pMainEngine);
         ma_engine engineEffect;
         if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
-            ma_engine_play_sound(&engineEffect, "jackpot.wav", NULL);
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            ma_engine_play_sound(&engineEffect, "win.wav", NULL);
+            std::this_thread::sleep_for(std::chrono::seconds(4));
             ma_engine_uninit(&engineEffect);
         }
         ma_engine_start(pMainEngine);
@@ -243,23 +243,14 @@ void playGame(ma_engine* pMainEngine) {
         ma_engine_stop(pMainEngine);
         ma_engine engineEffect;
         if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
-            ma_engine_play_sound(&engineEffect, "fart.wav", NULL);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
+            ma_engine_play_sound(&engineEffect, "loss.wav", NULL);
+            std::this_thread::sleep_for(std::chrono::seconds(4));
             ma_engine_uninit(&engineEffect);
         }
         ma_engine_start(pMainEngine);
 
     } else {
         std::cout << YELLOW << "PUSH! Bet returned." << RESET << "\n";
-
-        // Draw sound
-        ma_engine_stop(pMainEngine);
-        ma_engine engineEffect;
-        if (ma_engine_init(NULL, &engineEffect) == MA_SUCCESS) {
-            ma_engine_play_sound(&engineEffect, "draw.wav", NULL);
-            std::this_thread::sleep_for(std::chrono::seconds(2)); 
-            ma_engine_uninit(&engineEffect);
-        }
         ma_engine_start(pMainEngine);
     }
     

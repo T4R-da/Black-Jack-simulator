@@ -142,9 +142,15 @@ inline int calculateHandValue(const std::vector<Card>& hand) {
 inline void clearScreen() { system("cls"); }
 
 inline void printHeader() {
-    std::cout << RED << BOLD << "========================================" << RESET << std::endl;
-    std::cout << RED << BOLD << "          BLACKJACK CASINO ENGINE       " << RESET << std::endl;
-    std::cout << RED << BOLD << "========================================" << RESET << std::endl;
+        std::cout << RED << BOLD << R"(
+    =================================================================
+        ____  __    ___   ________ __        _____   ________ __
+       / __ )/ /   /   | / ____/ //_/       / /   | / ____/ //_/
+      / __  / /   / /| |/ /   / ,<     __  / / /| |/ /   / ,<   
+     / /_/ / /___/ ___ / /___/ /| |   / /_/ / ___ / /___/ /| |  
+    /_____/_____/_/  |_\____/_/ |_|   \____/_/  |_\____/_/ |_|                                                       
+    
+    =================================================================)" << RESET << std::endl;
 }
 
 inline void waitForEnter() {
