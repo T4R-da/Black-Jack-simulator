@@ -3,12 +3,12 @@
 #include <vector>
 #include <string>
 #include <ctime>
-#include <conio.h>
-#include <windows.h>
 #include <random>
 #include <thread>
 #include <chrono>
 #include <algorithm>
+#include <termios.h>
+#include <unistd.h>
 
 // ANSI Colors
 #define RESET   "\033[0m"
@@ -23,7 +23,7 @@ inline int playerBalance = 1000;
 inline int currentBet = 0;
 
 enum class Rank {
-    TWO = 2, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, 
+    TWO = 2, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN,
     JACK, QUEEN, KING, ACE
 };
 
@@ -50,10 +50,9 @@ struct Card {
             case Suit::SPADES:   s = "S"; break;
         }
 
-        // Hearts and Diamonds are Red
         if (suit == Suit::HEARTS || suit == Suit::DIAMONDS) std::cout << RED;
         else std::cout << CYAN;
-        
+
         std::cout << "[" << r << s << "] " << RESET;
     }
 };
@@ -64,73 +63,59 @@ inline void sleepMs(int ms) {
 }
 
 inline void sleepRandom() {
-    sleepMs(1000 + (rand() % 1000)); // 1-2 second delay for dealer "thinking"
+    sleepMs(1000 + (rand() % 1000));
 }
 
-// --- DECK CLASS (52 cards, no duplicates) ---
+// --- DECK CLASS ---
 class Deck {
 private:
     std::vector<Card> cards;
 public:
     Deck() {
-        // Create full 52-card deck
         for (int s = 0; s < 4; ++s) {
             for (int r = 2; r <= 14; ++r) {
                 cards.push_back({static_cast<Rank>(r), static_cast<Suit>(s)});
             }
         }
     }
-    
+
     void shuffle() {
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(cards.begin(), cards.end(), g);
     }
-    
+
     Card drawCard() {
-        if (cards.empty()) {
-            // Safety fallback - shouldn't happen in Blackjack (max 52 cards used)
-            return {Rank::ACE, Suit::SPADES};
-        }
+        if (cards.empty()) return {Rank::ACE, Suit::SPADES};
         Card c = cards.back();
         cards.pop_back();
         return c;
     }
-    
-    bool isEmpty() const {
-        return cards.empty();
-    }
-    
-    int remaining() const {
-        return static_cast<int>(cards.size());
-    }
-    
+
+    bool isEmpty() const { return cards.empty(); }
+    int remaining() const { return static_cast<int>(cards.size()); }
     void reset() {
         cards.clear();
-        for (int s = 0; s < 4; ++s) {
-            for (int r = 2; r <= 14; ++r) {
+        for (int s = 0; s < 4; ++s)
+            for (int r = 2; r <= 14; ++r)
                 cards.push_back({static_cast<Rank>(r), static_cast<Suit>(s)});
-            }
-        }
     }
 };
 
-// --- LOGIC FUNCTIONS ---
+// --- LOGIC ---
 inline int getCardValue(Rank r) {
     int v = (int)r;
-    if (v >= 11 && v <= 13) return 10; // J, Q, K = 10
-    if (v == 14) return 11;            // Ace = 11 (flexible)
+    if (v >= 11 && v <= 13) return 10;
+    if (v == 14) return 11;
     return v;
 }
 
 inline int calculateHandValue(const std::vector<Card>& hand) {
-    int total = 0;
-    int aces = 0;
+    int total = 0, aces = 0;
     for (const auto& c : hand) {
         total += getCardValue(c.rank);
         if (c.rank == Rank::ACE) aces++;
     }
-    // Ace logic: if total > 21, subtract 10 for every Ace (11 becomes 1)
     while (total > 21 && aces > 0) {
         total -= 10;
         aces--;
@@ -139,10 +124,12 @@ inline int calculateHandValue(const std::vector<Card>& hand) {
 }
 
 // --- UI HELPERS ---
-inline void clearScreen() { system("cls"); }
+inline void clearScreen() {
+    std::cout << "\033[2J\033[H";
+}
 
 inline void printHeader() {
-        std::cout << RED << BOLD << R"(
+    std::cout << RED << BOLD << R"(
     =================================================================
         ____  __    ___   ________ __        _____   ________ __
        / __ )/ /   /   | / ____/ //_/       / /   | / ____/ //_/
@@ -153,7 +140,23 @@ inline void printHeader() {
     =================================================================)" << RESET << std::endl;
 }
 
+// --- Cross‑platform getch (Linux) ---
+inline int getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
+}
+
 inline void waitForEnter() {
     std::cout << "\n" << YELLOW << "Press ENTER to continue..." << RESET;
-    while (_getch() != 13);
+    while (true) {
+        int ch = getch();
+        if (ch == '\n' || ch == '\r') break;
+    }
 }
